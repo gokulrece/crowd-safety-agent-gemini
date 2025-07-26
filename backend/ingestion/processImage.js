@@ -1,37 +1,72 @@
-// ingestion/processImage.js
 require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
+const player = require("play-sound")();
+
+const { sendAlertToFirebase } = require("./utils/firebaseClient");
 const { getGeminiInsightFromImage } = require("./utils/geminiClient");
-const axios = require("axios");
+const { synthesizeAndSaveAudio } = require("./utils/textToSpeech");
 
-// 🔗 Your deployed Cloud Function endpoint
-const GENERATE_ALERT_URL = "https://us-east1-crowdsafetyagent.cloudfunctions.net/generateAlert";
+const imageFolder = path.join(__dirname, "images");
+const counterImages = fs.readdirSync(imageFolder).filter(file => file.endsWith(".png"));
 
-// 🖼️ Convert image to base64
-function imageToBase64(filePath) {
-  const bitmap = fs.readFileSync(filePath);
-  return Buffer.from(bitmap).toString("base64");
-}
+async function analyzeAllCounters() {
+  const results = [];
 
-async function analyzeAndSend(imagePath, location = "CCTV Area") {
-  try {
-    const base64 = imageToBase64(imagePath);
-    const recommendation = await getGeminiInsightFromImage(base64);
+  for (const fileName of counterImages) {
+    const counterId = fileName.replace(".png", "");
+    const imagePath = path.join(imageFolder, fileName);
+    const base64Image = fs.readFileSync(imagePath, { encoding: "base64" });
 
-    const alert = {
-      location,
-      riskLevel: "High", // or let Gemini suggest this in future
-      recommendation,
+    console.log(`🔍 Processing ${counterId}...`);
+    const insight = await getGeminiInsightFromImage(base64Image);
+
+    let riskLevel = "Low";
+    if (/crowd(ed|ing|density|high|large)/i.test(insight)) riskLevel = "High";
+    else if (/moderate|some people|medium/i.test(insight)) riskLevel = "Medium";
+
+    results.push({ counterId, riskLevel, insight });
+  }
+
+  for (const counter of results) {
+    const alternate = results.find(
+      c => c.counterId !== counter.counterId && c.riskLevel === "Low"
+    );
+
+    const recommendation = counter.riskLevel === "High"
+      ? `Area crowded. Suggest visiting ${alternate ? alternate.counterId : "another counter later"}.`
+      : `Monitoring recommended.`;
+
+    const fullMessage = `${recommendation} Gemini Insight: ${counter.insight}`;
+
+    // 1. Send alert to Firebase
+    await sendAlertToFirebase({
+      location: counter.counterId,
+      riskLevel: counter.riskLevel,
+      recommendation: fullMessage,
+    });
+
+    // 2. Generate audio
+    const announcementText = `Attention: ${counter.counterId} is experiencing a ${counter.riskLevel} crowd. ${recommendation}`;
+    const audioFileName = `${counter.counterId}.mp3`;
+
+    await synthesizeAndSaveAudio(announcementText, audioFileName);
+
+    // 3. Play audio immediately and repeat every 60 seconds
+    const audioPath = path.join(__dirname, "audio", audioFileName);
+
+    const playAudio = () => {
+      player.play(audioPath, (err) => {
+        if (err) console.error(`🔇 Could not play audio for ${counter.counterId}:`, err.message);
+        else console.log(`🔊 Playing ${audioFileName}`);
+      });
     };
 
-    const response = await axios.post(GENERATE_ALERT_URL, alert);
-    console.log("✅ Alert Sent:", response.data);
-  } catch (err) {
-    console.error("❌ Error:", err.message);
+    playAudio(); // play once
+    setInterval(playAudio, 60000); // repeat every 60 seconds
   }
 }
 
-// 🔁 Run the analysis for a sample image
-const testImagePath = path.join(__dirname, "sample_crowd.png"); // <-- change this
-analyzeAndSend(testImagePath);
+analyzeAllCounters().catch((err) => {
+  console.error("❌ Error during analysis:", err);
+});
