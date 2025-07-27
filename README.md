@@ -27,14 +27,28 @@ Provides live updates to attendees via WhatsApp chatbot and dashboard.
 
 **HLD Architecture**
 
-<img width="745" height="309" alt="image" src="https://github.com/user-attachments/assets/6f6ecfc7-11aa-4803-a240-bc42ab02da18" />
+<img width="600" height="250" alt="image" src="https://github.com/user-attachments/assets/6f6ecfc7-11aa-4803-a240-bc42ab02da18" />
 
 **Implementation Procedure**
 
-Maintain the Project folder structure as you cloned the project.
-Have the Gemini prompt in 
-Open the cmd in the dir C:\<your project path>\injestion >> node processImage.js
-You can verify the 
+Maintain the project folder structure as you cloned the project.
+
+Have the Gemini prompt in utils/geminiClient.js.
+
+Open Command Prompt in the directory: C:\<your project path>\ingestion
+
+Then run: node processImage.js
+
+You can verify the web app–based dashboard with the provided URL. 
+https://crowdsafetyagent.web.app/
+  
+<img width="600" height="320" alt="image" src="https://github.com/user-attachments/assets/b3acce98-38ed-42f2-83c8-4d492a49f219" />
+
+Notifications are also sent through the public announcement speaker.
+
+<img width="600" height="270" alt="image" src="https://github.com/user-attachments/assets/b41ebc40-4946-4438-92a5-a51a33a836c5" />
+
+
 
 
 
