@@ -1,4 +1,4 @@
-// ingestion/utils/firebaseClient.js
+// utils/firebaseClient.js
 const axios = require("axios");
 
 const FIREBASE_FUNCTION_URL = "https://us-east1-crowdsafetyagent.cloudfunctions.net/generateAlert";

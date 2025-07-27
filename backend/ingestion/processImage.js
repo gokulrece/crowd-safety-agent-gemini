@@ -1,4 +1,6 @@
 require("dotenv").config();
+console.log("✅ Using credentials from:", process.env.GOOGLE_APPLICATION_CREDENTIALS);
+
 const fs = require("fs");
 const path = require("path");
 const player = require("play-sound")();
@@ -35,7 +37,7 @@ async function analyzeAllCounters() {
 
     const recommendation = counter.riskLevel === "High"
       ? `Area crowded. Suggest visiting ${alternate ? alternate.counterId : "another counter later"}.`
-      : `Monitoring recommended.`;
+      : `Use the counter for easier access.`;
 
     const fullMessage = `${recommendation} Gemini Insight: ${counter.insight}`;
 
